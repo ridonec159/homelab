@@ -72,13 +72,14 @@ This document provides a comprehensive technical overview of a self-built home l
 ---
 
 ## 2. Network Architecture
+<img width="890" height="559" alt="Screenshot 2026-07-14 214654" src="https://github.com/user-attachments/assets/e5e29030-884f-4b91-b437-53eb2658091d" />
 
 ### 2.1 Physical Topology
 
 The physical network follows a simple three-tier hierarchy designed for clarity, manageability, and separation of concerns. All traffic flows through the Meraki MX67W, which acts as the sole gateway and enforces all security policies.
 
 **Traffic flow — Primary Site:**
-`ISP → NBN Modem → Cisco Meraki MX67W (Firewall/Router) → Cisco Meraki MS350-24P (Core Switch) → Devices/Servers (MR56, TrueNAS, Proxmox)`
+`ISP → NBN Modem → Cisco Meraki MX67W (Firewall/Router) → Cisco Meraki MS350-24P (Core Switch) → Devices/Servers (MR56, TrueNAS, Proxmox Cluster)`
 
 **Traffic flow — Secondary Site:**
 `Site-to-Site VPN from Primary Site MX → Secondary Site MX → TrueNAS Backup Server (downstream of Secondary Site MX)`
@@ -145,7 +146,7 @@ Firewall rules are applied on the Meraki MX67W. The primary custom rule enforces
 
 > **Rule:** Block all traffic from VLAN 88 (Cybersecurity Capstone — 192.168.88.0/24) to all other VLANs.
 
-**Rationale:** University project team members were granted access to a server on VLAN 88 via Tailscale VPN. This firewall rule ensures external collaborators — and any traffic originating from that VLAN — cannot traverse into the home network or reach any other internal resources.
+**Rationale:** University project team members were granted access to a server on VLAN 88 via Tailscale VPN. This firewall rule ensures external collaborators and any traffic originating from that VLAN cannot traverse into the home network or reach any other internal resources.
 
 ### 2.6 VPN & Remote Access
 
