@@ -1,6 +1,6 @@
 # 🏠 Home Lab
 
-A self-built home lab used as a hands-on learning platform for cybersecurity, networking, system administration, and self-hosted services. Built around enterprise-grade Cisco Meraki networking hardware, a 3-node Proxmox cluster, and a TrueNAS SCALE storage server — all designed, deployed, and operated as personal learning infrastructure.
+A self-built home lab used as a hands-on learning platform for cybersecurity, networking, system administration, and self-hosted services. Built around enterprise-grade Cisco Meraki networking hardware, a 3-node Proxmox cluster, and a TrueNAS SCALE storage server. All designed, deployed, and operated as personal learning infrastructure.
 
 ![Networking](https://img.shields.io/badge/Networking-Cisco%20Meraki-1BA0D7)
 ![Virtualisation](https://img.shields.io/badge/Virtualisation-Proxmox%20VE-E57000)
