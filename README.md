@@ -1,6 +1,6 @@
-# 🏠 Home Lab
+# Home Lab
 
-A self-built home lab used as a hands-on learning platform for cybersecurity, networking, system administration, and self-hosted services. Built around enterprise-grade Cisco Meraki networking hardware, a 3-node Proxmox cluster, and a TrueNAS SCALE storage server. All designed, deployed, and operated as personal learning infrastructure.
+A self-built home lab used as a hands-on learning platform for cybersecurity, networking, system administration, and self-hosted services. Built around enterprise-grade Cisco Meraki networking hardware, a 3-node Proxmox cluster, and a TrueNAS storage server. All designed, deployed, and operated as personal learning infrastructure.
 
 ![Networking](https://img.shields.io/badge/Networking-Cisco%20Meraki-1BA0D7)
 ![Virtualisation](https://img.shields.io/badge/Virtualisation-Proxmox%20VE-E57000)
@@ -21,8 +21,8 @@ A self-built home lab used as a hands-on learning platform for cybersecurity, ne
   - [2.5 Firewall Policy](#25-firewall-policy)
   - [2.6 VPN & Remote Access](#26-vpn--remote-access)
 - [3. Hardware](#3-hardware)
-  - [3.1 Proxmox Nodes — Specifications](#31-proxmox-nodes--specifications)
-- [4. Storage — TrueNAS SCALE](#4-storage--truenas-scale)
+  - [3.1 Proxmox Nodes Specifications](#31-proxmox-nodes-specifications)
+- [4. Storage — TrueNAS Community Edition](#4-storage--truenas-community-edition)
   - [4.1 Storage Pools](#41-storage-pools)
   - [4.2 Network Shares](#42-network-shares)
   - [4.3 Backup Strategy (Current State)](#43-backup-strategy-current-state)
@@ -45,7 +45,7 @@ A self-built home lab used as a hands-on learning platform for cybersecurity, ne
   ![Lab Overview](assets/lab-overview.jpg)
 -->
 
-This document provides a comprehensive technical overview of a self-built home lab designed and maintained as a platform for hands-on learning in cybersecurity, networking, system administration, and self-hosted services. The environment is built around enterprise-grade Cisco Meraki networking hardware, a Proxmox virtualisation cluster, and a TrueNAS SCALE storage server — all managed and operated as a personal learning infrastructure.
+This document provides a comprehensive technical overview of a self-built home lab designed and maintained as a platform for hands-on learning in cybersecurity, networking, system administration, and self-hosted services. The environment is built around enterprise-grade Cisco Meraki networking hardware, a Proxmox virtualisation cluster, and a TrueNAS storage server all managed and operated as a personal learning infrastructure.
 
 ### 1.1 Objectives
 
@@ -60,13 +60,13 @@ This document provides a comprehensive technical overview of a self-built home l
 - VLAN segmentation, inter-VLAN routing, and access control policy
 - Firewall rule design and outbound traffic policy
 - Proxmox VE: VM and LXC container lifecycle management
-- TrueNAS SCALE: ZFS pool design, dataset management, NFS/SMB sharing
+- TrueNAS: ZFS pool design, dataset management, NFS/SMB sharing
 - Docker and containerised application deployment
 - Reverse proxy configuration (Nginx Proxy Manager) with Cloudflare DNS integration
 - Network-wide DNS filtering and ad-blocking (AdGuard Home)
 - Security monitoring and SIEM deployment (Wazuh)
-- Observability stack deployment (Prometheus, Grafana, Netdata, Uptime Kuma)
-- VPN configuration (Cisco Secure Client, Tailscale)
+- Observability stack deployment (Netdata, Uptime Kuma)
+- VPN configuration (Cisco Secure Client, Meraki Site-to-Site VPN, Tailscale)
 - Troubleshooting across networking, Linux, DNS, NFS, and Docker layers
 
 ---
@@ -175,7 +175,7 @@ Firewall rules are applied on the Meraki MX67W. The primary custom rule enforces
 | Virtualisation Node 2 | Proxmox VE (Lenovo ThinkCentre M900 Tiny) | Cluster member for HA, running AdGuard Home, Wazuh, Netdata, Uptime Kuma, Docker/Nginx Proxy Manager, and other services. |
 | Virtualisation Node 3 | Proxmox VE (Dell OptiPlex SFF) | Cluster member for HA, running AdGuard Home, Wazuh, Netdata, Uptime Kuma, Docker/Nginx Proxy Manager, and other services. |
 
-### 3.1 Proxmox Nodes — Specifications
+### 3.1 Proxmox Nodes Specifications
 
 **Node 1 — HP ProDesk 600 G3 Mini**
 
@@ -209,7 +209,7 @@ Firewall rules are applied on the Meraki MX67W. The primary custom rule enforces
 
 ---
 
-## 4. Storage — TrueNAS SCALE
+## 4. Storage — TrueNAS Community Edition
 
 The TrueNAS SCALE server acts as the central storage layer for the home lab, running ZFS-based storage pools to provide redundancy, data integrity, and flexible dataset management. It is connected to the core switch via link aggregation (LACP on ports 6 and 7), providing a 2 × 1 Gbps active-active uplink for improved throughput and redundancy.
 
@@ -242,21 +242,22 @@ The TrueNAS SCALE server acts as the central storage layer for the home lab, run
 ### 4.2 Network Shares
 
 - **SMB Share** (`backups/windows-smb`) — Provides Windows-compatible file sharing for backup and file access. Also used for backing up iOS devices (iPhone/iPad).
-- **NFS Share** (`backups/proxmox-nfs`) — Exposes a dedicated backup dataset to the Proxmox node via NFS, enabling automated Proxmox backup jobs (VZDump) to write directly to TrueNAS storage.
+- **NFS Share** (`backups/proxmox-nfs`) — A dedicated backup dataset to the Proxmox node via NFS, enabling automated Proxmox backup jobs (VZDump) to write directly to TrueNAS storage.
 
 ### 4.3 Backup Strategy (Current State)
 
-The current backup posture provides storage redundancy through RAID/ZFS mirroring across all pools, but does not yet constitute a full backup strategy. RAID protects against drive failure, not against accidental deletion, ransomware, or site-level events.
+The current backup posture provides storage redundancy through RAID/ZFS mirroring across all pools, plus two layers of off-node backup, but does not yet constitute a full 3-2-1 backup strategy.
 
 - Datasets are mirrored using ZFS RAID 1 and RAID 5.
-- Proxmox VM backups are scheduled via VZDump and written to the TrueNAS NFS share.
-- A 3-2-1 backup strategy is planned as a future phase (see [Section 7](#7-future-roadmap)).
+- The Proxmox cluster is backed up to a Proxmox Backup Server instance running on the TrueNAS server.
+- The TrueNAS server itself is backed up to a separate, remote TrueNAS server.
+- A full 3-2-1 backup strategy (three copies of data, on two different media types, with one copy off-site) is a goal, but the approach hasn't been finalised yet.
 
 ---
 
 ## 5. Services & Applications
 
-All services are deployed across three platforms: LXC containers on Proxmox, Docker containers inside a dedicated Ubuntu VM on Proxmox, and native applications on TrueNAS SCALE. External access to internal services is handled exclusively through Nginx Proxy Manager, using Cloudflare-managed domain names and automated SSL/TLS certificate provisioning.
+All services are deployed across three platforms: LXC containers on Proxmox, Docker containers inside a dedicated Ubuntu VM on Proxmox, and native applications on TrueNAS. External access to internal services is handled exclusively through Nginx Proxy Manager, using Cloudflare-managed domain names and automated SSL/TLS certificate provisioning.
 
 <!--
   Homarr dashboard / service overview screenshot goes here.
@@ -283,7 +284,7 @@ All services are deployed across three platforms: LXC containers on Proxmox, Doc
 
 **LXC Containers**
 - **AdGuard Home** — Network-wide DNS resolver and ad/tracker blocker. All client VLANs point to this service as their primary DNS server.
-- **Nginx Proxy Manager** — Reverse proxy and SSL termination. Manages Cloudflare DNS challenge-based certificate issuance for all internal services. *(Not yet in an LXC container — pending migration to the new server with more RAM and storage.)*
+- **Nginx Proxy Manager** — Reverse proxy and SSL termination. Manages Cloudflare DNS challenge-based certificate issuance for all internal services.
 
 **Ubuntu VM (Docker Host)**
 
@@ -318,9 +319,9 @@ The following section documents real issues encountered during the build and ope
 | **Affected System** | Cisco Meraki MR56 / VLAN 30 (My Devices) SSID |
 | **Symptom** | All internal service dashboards and UIs were inaccessible from personal devices connected to the SSID mapped to VLAN 30, despite correct IP addresses and internet connectivity. |
 | **Root Cause** | The "Block clients from accessing the LAN" option was enabled on the SSID in the Meraki dashboard, preventing wireless clients from communicating with wired network resources while still allowing internet access. |
-| **Diagnosis** | A packet capture taken directly from the Meraki MX67W dashboard revealed that packets from the wireless client were not reaching the destination server — confirming the block was occurring at the wireless layer, not the firewall. |
+| **Diagnosis** | A packet capture taken directly from the Meraki MX67W dashboard revealed that packets from the wireless client were not reaching the destination server which confirms the block was occurring at the wireless layer, not the firewall. |
 | **Resolution** | Disabled the "Block clients from accessing the LAN" setting on the affected SSID. LAN access was restored immediately. |
-| **Key Learning** | Packet captures are an effective first-response diagnostic tool. Client isolation (SSID-level) and firewall rules (MX-level) can silently drop traffic in ways that look identical to the client — always verify wireless-level settings before escalating to firewall rule investigation. |
+| **Key Learning** | Packet captures are an effective first-response diagnostic tool. Client isolation (SSID-level) and firewall rules (MX-level) can silently drop traffic in ways that look identical to the client. Always verify wireless-level settings before escalating to firewall rule investigation. |
 
 ### TS-02 — DNS Resolution Failure on Ubuntu VM
 
@@ -329,9 +330,9 @@ The following section documents real issues encountered during the build and ope
 | **Affected System** | Ubuntu VM on Proxmox (Docker host) |
 | **Symptoms** | `apt update` failed with "Temporary failure resolving". Docker image pulls failing. Homarr dashboard loading very slowly. General delays for all outbound connections from the VM. |
 | **Root Cause** | The VM was configured with a static IP via Cockpit (NetworkManager), but no DNS servers were explicitly set. systemd-resolved had no upstream resolvers assigned to the active interface (`ens18`), causing all DNS queries to fail silently. `/etc/resolv.conf` pointed to the local stub (127.0.0.53), which had nothing to forward queries to. |
-| **Diagnosis** | `resolvectl status` showed "Current Scopes: none" with no DNS servers listed. `ping 8.8.8.8` succeeded (IP routing OK); `ping google.com` failed (DNS broken) — proving the issue was DNS-only, not general connectivity. |
+| **Diagnosis** | `resolvectl status` showed "Current Scopes: none" with no DNS servers listed. `ping 8.8.8.8` succeeded (IP routing OK); `ping google.com` failed (DNS broken) proving the issue was DNS-only, not general connectivity. |
 | **Resolution** | Manually configured DNS servers via Cockpit NetworkManager (Primary 1.1.1.1, Secondary 8.8.8.8). DNS resolution was restored immediately; all dependent services returned to normal. |
-| **Key Learning** | Static IP configuration does not automatically inherit DNS settings — DNS must always be explicitly defined. Multiple network config layers (Netplan, NetworkManager, cloud-init) can conflict on Ubuntu. IP connectivity and DNS resolution are independent — always test both separately. |
+| **Key Learning** | Static IP configuration does not automatically inherit DNS settings so DNS must always be explicitly defined. Multiple network config layers (Netplan, NetworkManager, cloud-init) can conflict on Ubuntu. IP connectivity and DNS resolution are independent so always test both separately. |
 
 ### TS-03 — NFS Permission Denied (Proxmox → TrueNAS)
 
@@ -339,10 +340,10 @@ The following section documents real issues encountered during the build and ope
 |---|---|
 | **Affected System** | Proxmox VE — TrueNAS NFS storage integration |
 | **Symptom** | Adding TrueNAS NFS share to Proxmox as a backup storage target failed with: `create storage failed: mkdir /mnt/pve/<storage>/dump: Permission denied` |
-| **Root Cause** | NFS uses UID/GID-based permissions. Proxmox operates as root (UID 0), but TrueNAS applies root squashing by default — mapping root to the unprivileged "nobody" account — so Proxmox had no write access to create the backup directory structure. |
+| **Root Cause** | NFS uses UID/GID-based permissions. Proxmox operates as root (UID 0), but TrueNAS applies root squashing by default mapping root to the unprivileged "nobody" account, so Proxmox had no write access to create the backup directory structure. |
 | **Resolution** | 1. Set dataset ownership to `root:wheel` in TrueNAS. 2. Configured the NFS share with Maproot User: `root` and Maproot Group: `wheel`. 3. Restricted NFS access to the Proxmox host IP. 4. Restarted the NFS service. 5. Added the NFS storage target in Proxmox (Datacenter → Storage → Add → NFS). |
 | **Verification** | Mounted the NFS share manually on the Proxmox CLI and ran a touch test to confirm write access before adding it via the GUI. |
-| **Key Learning** | NFS permission failures are almost always a UID/GID mismatch, not a traditional file permission issue. Understanding NFS root squashing is essential when integrating Linux-based storage with hypervisors — always validate with a manual CLI mount test before configuring via a GUI. |
+| **Key Learning** | NFS permission failures are almost always a UID/GID mismatch, not a traditional file permission issue. Understanding NFS root squashing is essential when integrating Linux-based storage with hypervisors. Always validate with a manual CLI mount test before configuring via a GUI. |
 
 ### TS-04 — Nginx Proxy Manager SSL Certificate Issuance Failure
 
@@ -352,7 +353,7 @@ The following section documents real issues encountered during the build and ope
 | **Symptom** | Provisioning a Let's Encrypt SSL certificate via Nginx Proxy Manager failed. The Cloudflare DNS challenge could not be validated, leaving services inaccessible via HTTPS on the custom domain. |
 | **Root Cause** | The Cloudflare API token supplied to Nginx Proxy Manager lacked the correct permissions (requires `Zone:Read` and `Zone:DNS:Edit` scoped to the specific zone). An incorrectly scoped or expired token causes the DNS-01 challenge to fail silently. |
 | **Resolution** | Generated a new Cloudflare API token with the correct `Zone:Read` and `DNS:Edit` permissions scoped to the target domain zone, updated it in Nginx Proxy Manager, and re-triggered the certificate request. |
-| **Key Learning** | DNS-01 challenges require precise API token scoping — over- and under-permissioned tokens both cause failures. Always scope API tokens to the minimum required permissions and verify zone scope when using Cloudflare with automated certificate tooling. |
+| **Key Learning** | DNS-01 challenges require precise API token scoping over and under-permissioned tokens both cause failures. Always scope API tokens to the minimum required permissions and verify zone scope when using Cloudflare with automated certificate tooling. |
 
 ### TS-05 — Laptop Intermittently Fails to Connect to Personal SSID
 
@@ -360,14 +361,14 @@ The following section documents real issues encountered during the build and ope
 |---|---|
 | **Affected System** | Personal laptop / VLAN 30 (My Devices) SSID — Cisco Meraki MR56 |
 | **Symptom** | The laptop intermittently fails to associate with the SSID mapped to VLAN 30 (/29 subnet). Non-reproducible on demand; other devices on the same SSID are unaffected. |
-| **Status** | 🔍 Under investigation. The small /29 subnet (6 usable host addresses) is a suspected contributing factor — if the DHCP pool is exhausted or a lease is held by a stale device, the laptop cannot obtain an IP address. |
-| **Next Steps** | 1. Review Meraki Dashboard event log for association failures. 2. Check active DHCP leases on VLAN 30 — verify available addresses in the /29 pool. 3. If pool exhaustion is confirmed, consider a static IP or expanding the subnet. 4. Check for 802.11 band steering or roaming issues on the MR56. |
+| **Status** | Under investigation. The small /29 subnet (6 usable host addresses) is a suspected contributing factor. If the DHCP pool is exhausted or a lease is held by a stale device, the laptop cannot obtain an IP address. |
+| **Next Steps** | 1. Review Meraki Dashboard event log for association failures. 2. Check active DHCP leases on VLAN 30, verify available addresses in the /29 pool. 3. If pool exhaustion is confirmed, consider a static IP or expanding the subnet. 4. Check for 802.11 band steering or roaming issues on the MR56. |
 
 ---
 
 ## 7. Future Roadmap
 
-> 🚧 Coming soon.
+> Coming soon.
 
 ---
 
